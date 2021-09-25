@@ -610,7 +610,7 @@ impl SupportedStreamConfigRange {
     /// - Max sample rate
     pub fn cmp_default_heuristics(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering::Equal;
-        use SampleFormat::{F32, I16, U16};
+        use SampleFormat::{F32, I16, I32, U16};
 
         let cmp_stereo = (self.channels == 2).cmp(&(other.channels == 2));
         if cmp_stereo != Equal {
@@ -625,6 +625,11 @@ impl SupportedStreamConfigRange {
         let cmp_channels = self.channels.cmp(&other.channels);
         if cmp_channels != Equal {
             return cmp_channels;
+        }
+
+        let cmp_i32 = (self.sample_format == I32).cmp(&(other.sample_format == I32));
+        if cmp_i32 != Equal {
+            return cmp_i32;
         }
 
         let cmp_f32 = (self.sample_format == F32).cmp(&(other.sample_format == F32));
@@ -693,6 +698,13 @@ fn test_cmp_default_heuristics() {
             max_sample_rate: SampleRate(22050),
             sample_format: SampleFormat::F32,
         },
+        SupportedStreamConfigRange {
+            buffer_size: SupportedBufferSize::Range { min: 256, max: 512 },
+            channels: 2,
+            min_sample_rate: SampleRate(1),
+            max_sample_rate: SampleRate(96000),
+            sample_format: SampleFormat::I32,
+        },
     ];
 
     formats.sort_by(|a, b| a.cmp_default_heuristics(b));
@@ -722,6 +734,11 @@ fn test_cmp_default_heuristics() {
     assert_eq!(formats[4].min_sample_rate(), SampleRate(1));
     assert_eq!(formats[4].max_sample_rate(), SampleRate(96000));
     assert_eq!(formats[4].channels(), 2);
+
+    assert_eq!(formats[5].sample_format(), SampleFormat::I32);
+    assert_eq!(formats[5].min_sample_rate(), SampleRate(1));
+    assert_eq!(formats[5].max_sample_rate(), SampleRate(96000));
+    assert_eq!(formats[5].channels(), 2);
 }
 
 impl From<SupportedStreamConfig> for StreamConfig {

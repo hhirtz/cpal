@@ -5,6 +5,8 @@ use std::mem;
 pub enum SampleFormat {
     /// The value 0 corresponds to 0.
     I16,
+    /// The value 0 corresponds to 0.
+    I32,
     /// The value 0 corresponds to 32768.
     U16,
     /// The boundaries are (-1.0, 1.0).
@@ -17,6 +19,7 @@ impl SampleFormat {
     pub fn sample_size(&self) -> usize {
         match *self {
             SampleFormat::I16 => mem::size_of::<i16>(),
+            SampleFormat::I32 => mem::size_of::<i32>(),
             SampleFormat::U16 => mem::size_of::<u16>(),
             SampleFormat::F32 => mem::size_of::<f32>(),
         }
@@ -32,10 +35,12 @@ pub unsafe trait Sample: Copy + Clone {
     fn to_f32(&self) -> f32;
     /// Converts this sample into a standard i16 sample.
     fn to_i16(&self) -> i16;
+    /// Converts this sample into a standard i32 sample.
+    fn to_i32(&self) -> i32;
     /// Converts this sample into a standard u16 sample.
     fn to_u16(&self) -> u16;
 
-    /// Converts any sample type to this one by calling `to_i16`, `to_u16` or `to_f32`.
+    /// Converts any sample type to this one by calling one of `Sample::to_*`.
     fn from<S>(s: &S) -> Self
     where
         S: Sample;
@@ -56,6 +61,11 @@ unsafe impl Sample for u16 {
         } else {
             (*self as i16) - 32767 - 1
         }
+    }
+
+    #[inline]
+    fn to_i32(&self) -> i32 {
+        (*self as i32) - 32768
     }
 
     #[inline]
@@ -90,6 +100,11 @@ unsafe impl Sample for i16 {
     }
 
     #[inline]
+    fn to_i32(&self) -> i32 {
+        *self as i32
+    }
+
+    #[inline]
     fn to_u16(&self) -> u16 {
         if *self < 0 {
             (*self - i16::MIN) as u16
@@ -107,6 +122,42 @@ unsafe impl Sample for i16 {
     }
 }
 
+unsafe impl Sample for i32 {
+    const FORMAT: SampleFormat = SampleFormat::I32;
+
+    #[inline]
+    fn to_f32(&self) -> f32 {
+        if *self < 0 {
+            *self as f32 / -(i32::MIN as f32)
+        } else {
+            *self as f32 / i32::MAX as f32
+        }
+    }
+
+    #[inline]
+    fn to_i16(&self) -> i16 {
+        *self as i16
+    }
+
+    #[inline]
+    fn to_i32(&self) -> i32 {
+        *self
+    }
+
+    #[inline]
+    fn to_u16(&self) -> u16 {
+        (*self as i16).to_u16()
+    }
+
+    #[inline]
+    fn from<S>(sample: &S) -> Self
+    where
+        S: Sample,
+    {
+        sample.to_i32()
+    }
+}
+
 unsafe impl Sample for f32 {
     const FORMAT: SampleFormat = SampleFormat::F32;
 
@@ -121,6 +172,15 @@ unsafe impl Sample for f32 {
             (*self * i16::MAX as f32) as i16
         } else {
             (-*self * i16::MIN as f32) as i16
+        }
+    }
+
+    #[inline]
+    fn to_i32(&self) -> i32 {
+        if *self >= 0.0 {
+            (*self * i32::MAX as f32) as i32
+        } else {
+            (-*self * i32::MIN as f32) as i32
         }
     }
 

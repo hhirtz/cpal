@@ -320,7 +320,7 @@ impl Device {
         let hw_params = alsa::pcm::HwParams::any(handle)?;
 
         // TODO: check endianess
-        const FORMATS: [(SampleFormat, alsa::pcm::Format); 3] = [
+        const FORMATS: [(SampleFormat, alsa::pcm::Format); 4] = [
             //SND_PCM_FORMAT_S8,
             //SND_PCM_FORMAT_U8,
             (SampleFormat::I16, alsa::pcm::Format::S16LE),
@@ -331,7 +331,7 @@ impl Device {
             //SND_PCM_FORMAT_S24_BE,
             //SND_PCM_FORMAT_U24_LE,
             //SND_PCM_FORMAT_U24_BE,
-            //SND_PCM_FORMAT_S32_LE,
+            (SampleFormat::I32, alsa::pcm::Format::S32LE),
             //SND_PCM_FORMAT_S32_BE,
             //SND_PCM_FORMAT_U32_LE,
             //SND_PCM_FORMAT_U32_BE,
@@ -975,12 +975,14 @@ fn set_hw_params_from_format(
     let sample_format = if cfg!(target_endian = "big") {
         match sample_format {
             SampleFormat::I16 => alsa::pcm::Format::S16BE,
+            SampleFormat::I32 => alsa::pcm::Format::S32BE,
             SampleFormat::U16 => alsa::pcm::Format::U16BE,
             SampleFormat::F32 => alsa::pcm::Format::FloatBE,
         }
     } else {
         match sample_format {
             SampleFormat::I16 => alsa::pcm::Format::S16LE,
+            SampleFormat::I32 => alsa::pcm::Format::S32LE,
             SampleFormat::U16 => alsa::pcm::Format::U16LE,
             SampleFormat::F32 => alsa::pcm::Format::FloatLE,
         }
